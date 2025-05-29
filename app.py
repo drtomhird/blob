@@ -35,26 +35,25 @@ def run_hawk_dove_simulation(
         # resolve interactions at each food item
         for group in groups.values():
             if len(group) == 1:
+                # solo forager
                 survivors.append(group[0])
                 offspring.append(group[0])
             else:
-                random.shuffle(group)
-                while len(group) >= 2:
-                    a, b = group.pop(), group.pop()
-                    (s_a, r_a), (s_b, r_b) = payoff_matrix[(a, b)]
-                    if random.random() < s_a:
-                        survivors.append(a)
-                    if random.random() < s_b:
-                        survivors.append(b)
-                    if random.random() < r_a:
-                        offspring.append(a)
-                    if random.random() < r_b:
-                        offspring.append(b)
-                if group:
-                    lone = group.pop()
-                    survivors.append(lone)
-                    offspring.append(lone)
+                # only two individuals compete; extras die
+                a, b = random.sample(group, 2)
+                (s_a, r_a), (s_b, r_b) = payoff_matrix[(a, b)]
+                # survival
+                if random.random() < s_a:
+                    survivors.append(a)
+                if random.random() < s_b:
+                    survivors.append(b)
+                # reproduction
+                if random.random() < r_a:
+                    offspring.append(a)
+                if random.random() < r_b:
+                    offspring.append(b)
 
+        # build population for next period
         population = survivors + offspring
         ts_doves[t] = population.count('D')
         ts_hawks[t] = population.count('H')
@@ -95,7 +94,7 @@ default_payoffs = {
 }
 
 payoff_matrix = {}
-# Use enumerate to ensure unique keys for each slider
+# Unique keys via index
 for idx, (pair, vals) in enumerate(default_payoffs.items()):
     sd_def, rd_def, sh_def, rh_def = vals
     sd = st.sidebar.slider(
