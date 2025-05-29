@@ -3,6 +3,7 @@ import numpy as np
 import pandas as pd
 import streamlit as st
 import matplotlib.pyplot as plt
+import time
 
 # --- Simulation function ---
 def run_hawk_dove_simulation(
@@ -122,10 +123,25 @@ if st.sidebar.button("Run Simulation"):
         n_doves, n_hawks, n_food, n_periods, payoff_matrix, seed_val
     )
 
-    df = pd.DataFrame({"Doves": ts_doves, "Hawks": ts_hawks})
+    df = pd.DataFrame({
+        "Doves": ts_doves,
+        "Hawks": ts_hawks
+    })
 
     st.subheader("Population Over Time")
     st.line_chart(df)
 
     st.subheader("Final Counts")
     st.write(df.iloc[-1])
+
+    # Animated Dove Percentage
+    percent = df['Doves'] / (df['Doves'] + df['Hawks']) * 100
+    st.subheader("Dove Percentage Over Time")
+    placeholder = st.empty()
+    total_time = 10.0
+    interval = total_time / len(percent)
+    for i in range(len(percent)):
+        placeholder.line_chart(
+            pd.DataFrame({"Dove %": percent[:i+1]})
+        )
+        time.sleep(interval)
