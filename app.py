@@ -94,23 +94,24 @@ default_payoffs = {
 }
 
 payoff_matrix = {}
-for pair, vals in default_payoffs.items():
+# Use enumerate to ensure unique keys for each slider
+for idx, (pair, vals) in enumerate(default_payoffs.items()):
     sd_def, rd_def, sh_def, rh_def = vals
     sd = st.sidebar.slider(
         f"Survive {pair[0]} vs {pair[1]}", 0, 100, sd_def,
-        key=f"survive_{pair[0]}_{pair[1]}"
+        key=f"survive_{idx}_{pair[0]}_{pair[1]}"
     )
     rd = st.sidebar.slider(
         f"Reproduce {pair[0]} vs {pair[1]}", 0, 100, rd_def,
-        key=f"reproduce_{pair[0]}_{pair[1]}"
+        key=f"reproduce_{idx}_{pair[0]}_{pair[1]}"
     )
     sh = st.sidebar.slider(
         f"Survive {pair[1]} vs {pair[0]}", 0, 100, sh_def,
-        key=f"survive_{pair[1]}_{pair[0]}"
+        key=f"survive_swap_{idx}_{pair[1]}_{pair[0]}"
     )
     rh = st.sidebar.slider(
         f"Reproduce {pair[1]} vs {pair[0]}", 0, 100, rh_def,
-        key=f"reproduce_{pair[1]}_{pair[0]}"
+        key=f"reproduce_swap_{idx}_{pair[1]}_{pair[0]}"
     )
     payoff_matrix[pair] = ((sd/100, rd/100), (sh/100, rh/100))
 
