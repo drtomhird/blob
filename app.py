@@ -73,24 +73,25 @@ with st.sidebar:
     run = st.button("Run Simulation")
 
 if run:
+    # Run simulation
     seed_val = None if seed == 0 else seed
-    ts_doves, ts_hawks = run_hawk_dove_simulation(
-        n_doves, n_hawks, n_food, n_periods, payoff_matrix, seed_val
-    )
-    df = pd.DataFrame({'Doves': ts_doves, 'Hawks': ts_hawks})
+    ts_doves, ts_hawks = run_hawk_dove_simulation(n_doves, n_hawks, n_food, n_periods, payoff_matrix, seed_val)
+    df = pd.DataFrame({"Doves": ts_doves, "Hawks": ts_hawks})
     df.index.name = 'Period'
 
-    # Set total animation durations (in seconds)
-    durations = {'Slow': 160.0, 'Normal': 120.0, 'Fast': 30.0}
-    total_duration = durations[speed]
-    delay = total_duration / len(df)
-    max_pop = max(df.max())
+    # Animation parameters: skip frames and delay per speed
+    skip_map = {'Slow': 1, 'Normal': 2, 'Fast': 5}
+    delay_map = {'Slow': 0.1, 'Normal': 0.05, 'Fast': 0.02}
+    skip = skip_map[speed]
+    delay = delay_map[speed]
 
-    # Population chart
+    max_pop = max(df["Doves"].max(), df["Hawks"].max())
+
+    # Population Over Time
     st.subheader("Population Over Time")
     placeholder_pop = st.empty()
     if pop_anim:
-        for i in range(len(df)):
+        for i in range(0, len(df), skip):
             fig, ax = plt.subplots()
             ax.plot(df.index[:i+1], df['Doves'][:i+1], label='Doves')
             ax.plot(df.index[:i+1], df['Hawks'][:i+1], label='Hawks')
@@ -106,16 +107,16 @@ if run:
         ax.legend()
         placeholder_pop.pyplot(fig)
 
-    # Final counts
+    # Final Counts
     st.subheader("Final Counts")
     st.write(df.iloc[-1])
 
-    # Dove percentage chart
+    # Dove % Over Time
     percent = df['Doves'] / df.sum(axis=1) * 100
     st.subheader("Dove % Over Time")
     placeholder_pct = st.empty()
     if pct_anim:
-        for i in range(len(df)):
+        for i in range(0, len(df), skip):
             fig, ax = plt.subplots()
             ax.plot(df.index[:i+1], percent[:i+1], label='Dove %')
             ax.set(xlabel='Period', ylabel='Percentage', ylim=(0, 100))
