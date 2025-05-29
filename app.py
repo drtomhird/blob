@@ -87,6 +87,11 @@ with st.sidebar:
     st.subheader("Visualization Options")
     pop_anim = st.checkbox("Animate Population Over Time", value=False)
     pct_anim = st.checkbox("Animate Dove % Over Time", value=False)
+    speed = st.radio(
+        "Animation Speed",
+        options=["Slow", "Normal", "Fast"],
+        index=1
+    )
 
     run = st.button("Run Simulation")
 
@@ -99,14 +104,17 @@ if run:
     df = pd.DataFrame({'Doves': ts_doves, 'Hawks': ts_hawks})
     df.index.name = 'Period'
 
-    # Precompute axis limits
+    # Precompute axis limits and base delay
     max_pop = max(df['Doves'].max(), df['Hawks'].max())
+    base_delay = 10.0 / len(df)
+    # Speed multipliers: Slow = 1.333x, Normal = 1x, Fast = 0.25x
+    multipliers = {'Slow': 1.333, 'Normal': 1.0, 'Fast': 0.25}
+    delay = base_delay * multipliers[speed]
 
     # Population chart
     st.subheader("Population Over Time")
     placeholder_pop = st.empty()
     if pop_anim:
-        delay = 10.0 / len(df)
         for i in range(len(df)):
             fig, ax = plt.subplots()
             ax.plot(df.index[:i+1], df['Doves'][:i+1], label='Doves')
@@ -136,7 +144,6 @@ if run:
     st.subheader("Dove % Over Time")
     placeholder_pct = st.empty()
     if pct_anim:
-        delay = 10.0 / len(df)
         for i in range(len(df)):
             fig, ax = plt.subplots()
             ax.plot(df.index[:i+1], percent[:i+1], label='Dove %')
