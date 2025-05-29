@@ -20,7 +20,7 @@ def run_hawk_dove_simulation(
     population = ['D'] * n_doves + ['H'] * n_hawks
 
     for t in range(1, n_periods + 1):
-        # Limit population to 2*n_food: random survivors if over
+        # Limit population to 2*n_food: random cull if over
         if len(population) > 2 * n_food:
             population = random.sample(population, 2 * n_food)
 
@@ -75,7 +75,6 @@ with st.sidebar:
         sh = st.slider(f"Survive {pair[1]} vs {pair[0]}",0,100,sh_def, key=f"sh_{idx}")
         rh = st.slider(f"Reproduce {pair[1]} vs {pair[0]}",0,100,rh_def, key=f"rh_{idx}")
         payoff_matrix[pair] = ((sd/100, rd/100),(sh/100, rh/100))
-
     run = st.button("Run Simulation")
 
 # Main area
@@ -87,33 +86,48 @@ if run:
     df = pd.DataFrame({'Doves': ts_doves, 'Hawks': ts_hawks})
     df.index.name = 'Period'
 
-    # Population Over Time
-    fig1, ax1 = plt.subplots()
-    ax1.plot(df.index, df['Doves'], label='Doves')
-    ax1.plot(df.index, df['Hawks'], label='Hawks')
-    ax1.set_xlabel('Period')
-    ax1.set_ylabel('Population')
-    ax1.legend()
+    # Population Over Time (Animated)
     st.subheader("Population Over Time")
-    st.pyplot(fig1)
+    placeholder_pop = st.empty()
+    if st.checkbox("Animate Population Over Time", key="anim_pop"):
+        total = len(df)
+        delay = 10.0 / total
+        for i in range(total):
+            fig_p, ax_p = plt.subplots()
+            ax_p.plot(df.index[:i+1], df['Doves'][:i+1], label='Doves')
+            ax_p.plot(df.index[:i+1], df['Hawks'][:i+1], label='Hawks')
+            ax_p.set_xlabel('Period')
+            ax_p.set_ylabel('Population')
+            ax_p.legend()
+            placeholder_pop.pyplot(fig_p)
+            time.sleep(delay)
+    else:
+        fig1, ax1 = plt.subplots()
+        ax1.plot(df.index, df['Doves'], label='Doves')
+        ax1.plot(df.index, df['Hawks'], label='Hawks')
+        ax1.set_xlabel('Period')
+        ax1.set_ylabel('Population')
+        ax1.legend()
+        placeholder_pop.pyplot(fig1)
 
     # Final Counts
     st.subheader("Final Counts")
     st.write(df.iloc[-1])
 
-    # Dove Percentage
-    percent = df['Doves'] / (df.sum(axis=1)) * 100
+    # Dove Percentage Over Time
+    percent = df['Doves'] / df.sum(axis=1) * 100
+    st.subheader("Dove Percentage Over Time")
+    placeholder_pct = st.empty()
     fig2, ax2 = plt.subplots()
     ax2.plot(df.index, percent, label='Dove %')
     ax2.set_xlabel('Period')
     ax2.set_ylabel('Percentage')
+    ax2.set_ylim(0, 100)
     ax2.legend()
-    st.subheader("Dove Percentage Over Time")
-    st.pyplot(fig2)
+    placeholder_pct.pyplot(fig2)
 
-    # Animate
-    if st.checkbox("Animate Dove %", key="anim"):
-        placeholder = st.empty()
+    # Animate Dove Percentage
+    if st.checkbox("Animate Dove %", key="anim_pct"):
         total = len(percent)
         delay = 10.0 / total
         for i in range(total):
@@ -121,6 +135,7 @@ if run:
             ax3.plot(df.index[:i+1], percent[:i+1], label='Dove %')
             ax3.set_xlabel('Period')
             ax3.set_ylabel('Percentage')
+            ax3.set_ylim(0, 100)
             ax3.legend()
-            placeholder.pyplot(fig3)
+            placeholder_pct.pyplot(fig3)
             time.sleep(delay)
