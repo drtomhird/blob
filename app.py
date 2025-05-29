@@ -20,14 +20,15 @@ def run_hawk_dove_simulation(
     population = ['D'] * n_doves + ['H'] * n_hawks
 
     for t in range(1, n_periods + 1):
-        # Limit population to 2*n_food: random cull if over
+        # Cap population at 2*n_food by random cull
         if len(population) > 2 * n_food:
             population = random.sample(population, 2 * n_food)
 
+        # Assign each to a food item
         choices = [random.randrange(n_food) for _ in population]
         groups = {}
-        for i, who in enumerate(population):
-            groups.setdefault(choices[i], []).append(who)
+        for who, f in zip(population, choices):
+            groups.setdefault(f, []).append(who)
 
         survivors, offspring = [], []
         for group in groups.values():
@@ -56,7 +57,7 @@ def run_hawk_dove_simulation(
 st.set_page_config(page_title="Hawk–Dove Foraging Simulation", layout="wide")
 st.title("🦅 Hawk–Dove Foraging Simulation")
 
-# Sidebar inputs
+# Sidebar controls
 with st.sidebar:
     st.header("Simulation Parameters")
     n_doves = st.number_input("Initial # of Doves", 1, 1000, 20)
@@ -64,20 +65,32 @@ with st.sidebar:
     n_food = st.number_input("Food Items per Period", 1, 10000, 200)
     n_periods = st.number_input("# of Periods", 1, 10000, 400)
     seed = st.number_input("Random Seed (0=None)", 0, 9999, 42)
+
     st.markdown("---")
     st.subheader("Payoff Matrix (Survive %, Reproduce %)")
-    default_payoffs = {('D','D'):(100,0,100,0), ('D','H'):(50,0,100,50), ('H','D'):(100,50,50,0), ('H','H'):(0,0,0,0)}
+    default_payoffs = {
+        ('D','D'): (100, 0, 100, 0),
+        ('D','H'): (50, 0, 100, 50),
+        ('H','D'): (100, 50, 50, 0),
+        ('H','H'): (0, 0, 0, 0)
+    }
     payoff_matrix = {}
     for idx, (pair, vals) in enumerate(default_payoffs.items()):
         sd_def, rd_def, sh_def, rh_def = vals
-        sd = st.slider(f"Survive {pair[0]} vs {pair[1]}", 0,100,sd_def, key=f"sd_{idx}")
-        rd = st.slider(f"Reproduce {pair[0]} vs {pair[1]}",0,100,rd_def, key=f"rd_{idx}")
-        sh = st.slider(f"Survive {pair[1]} vs {pair[0]}",0,100,sh_def, key=f"sh_{idx}")
-        rh = st.slider(f"Reproduce {pair[1]} vs {pair[0]}",0,100,rh_def, key=f"rh_{idx}")
-        payoff_matrix[pair] = ((sd/100, rd/100),(sh/100, rh/100))
+        sd = st.slider(f"Survive {pair[0]} vs {pair[1]}", 0, 100, sd_def, key=f"sd_{idx}")
+        rd = st.slider(f"Reproduce {pair[0]} vs {pair[1]}", 0, 100, rd_def, key=f"rd_{idx}")
+        sh = st.slider(f"Survive {pair[1]} vs {pair[0]}", 0, 100, sh_def, key=f"sh_{idx}")
+        rh = st.slider(f"Reproduce {pair[1]} vs {pair[0]}", 0, 100, rh_def, key=f"rh_{idx}")
+        payoff_matrix[pair] = ((sd/100, rd/100), (sh/100, rh/100))
+
+    st.markdown("---")
+    st.subheader("Visualization Options")
+    pop_anim = st.checkbox("Animate Population Over Time", value=False)
+    pct_anim = st.checkbox("Animate Dove % Over Time", value=False)
+
     run = st.button("Run Simulation")
 
-# Main area
+# Main display
 if run:
     seed_val = None if seed == 0 else seed
     ts_doves, ts_hawks = run_hawk_dove_simulation(
@@ -86,56 +99,58 @@ if run:
     df = pd.DataFrame({'Doves': ts_doves, 'Hawks': ts_hawks})
     df.index.name = 'Period'
 
-    # Population Over Time (Animated)
+    # Precompute axis limits
+    max_pop = max(df['Doves'].max(), df['Hawks'].max())
+
+    # Population chart
     st.subheader("Population Over Time")
     placeholder_pop = st.empty()
-    if st.checkbox("Animate Population Over Time", key="anim_pop"):
-        total = len(df)
-        delay = 10.0 / total
-        for i in range(total):
-            fig_p, ax_p = plt.subplots()
-            ax_p.plot(df.index[:i+1], df['Doves'][:i+1], label='Doves')
-            ax_p.plot(df.index[:i+1], df['Hawks'][:i+1], label='Hawks')
-            ax_p.set_xlabel('Period')
-            ax_p.set_ylabel('Population')
-            ax_p.legend()
-            placeholder_pop.pyplot(fig_p)
+    if pop_anim:
+        delay = 10.0 / len(df)
+        for i in range(len(df)):
+            fig, ax = plt.subplots()
+            ax.plot(df.index[:i+1], df['Doves'][:i+1], label='Doves')
+            ax.plot(df.index[:i+1], df['Hawks'][:i+1], label='Hawks')
+            ax.set_xlabel('Period')
+            ax.set_ylabel('Population')
+            ax.set_ylim(0, max_pop * 1.1)
+            ax.legend()
+            placeholder_pop.pyplot(fig)
             time.sleep(delay)
     else:
-        fig1, ax1 = plt.subplots()
-        ax1.plot(df.index, df['Doves'], label='Doves')
-        ax1.plot(df.index, df['Hawks'], label='Hawks')
-        ax1.set_xlabel('Period')
-        ax1.set_ylabel('Population')
-        ax1.legend()
-        placeholder_pop.pyplot(fig1)
+        fig, ax = plt.subplots()
+        ax.plot(df.index, df['Doves'], label='Doves')
+        ax.plot(df.index, df['Hawks'], label='Hawks')
+        ax.set_xlabel('Period')
+        ax.set_ylabel('Population')
+        ax.set_ylim(0, max_pop * 1.1)
+        ax.legend()
+        placeholder_pop.pyplot(fig)
 
-    # Final Counts
+    # Final counts
     st.subheader("Final Counts")
     st.write(df.iloc[-1])
 
-    # Dove Percentage Over Time
+    # Dove percentage chart
     percent = df['Doves'] / df.sum(axis=1) * 100
-    st.subheader("Dove Percentage Over Time")
+    st.subheader("Dove % Over Time")
     placeholder_pct = st.empty()
-    fig2, ax2 = plt.subplots()
-    ax2.plot(df.index, percent, label='Dove %')
-    ax2.set_xlabel('Period')
-    ax2.set_ylabel('Percentage')
-    ax2.set_ylim(0, 100)
-    ax2.legend()
-    placeholder_pct.pyplot(fig2)
-
-    # Animate Dove Percentage
-    if st.checkbox("Animate Dove %", key="anim_pct"):
-        total = len(percent)
-        delay = 10.0 / total
-        for i in range(total):
-            fig3, ax3 = plt.subplots()
-            ax3.plot(df.index[:i+1], percent[:i+1], label='Dove %')
-            ax3.set_xlabel('Period')
-            ax3.set_ylabel('Percentage')
-            ax3.set_ylim(0, 100)
-            ax3.legend()
-            placeholder_pct.pyplot(fig3)
+    if pct_anim:
+        delay = 10.0 / len(df)
+        for i in range(len(df)):
+            fig, ax = plt.subplots()
+            ax.plot(df.index[:i+1], percent[:i+1], label='Dove %')
+            ax.set_xlabel('Period')
+            ax.set_ylabel('Percentage')
+            ax.set_ylim(0, 100)
+            ax.legend()
+            placeholder_pct.pyplot(fig)
             time.sleep(delay)
+    else:
+        fig, ax = plt.subplots()
+        ax.plot(df.index, percent, label='Dove %')
+        ax.set_xlabel('Period')
+        ax.set_ylabel('Percentage')
+        ax.set_ylim(0, 100)
+        ax.legend()
+        placeholder_pct.pyplot(fig)
